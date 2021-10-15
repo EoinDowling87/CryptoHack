@@ -1,60 +1,54 @@
-from Crypto.Util.number import bytes_to_long, long_to_bytes
-from utils import listener # this is cryptohack's server-side module and not part of python
+from pwn import *
+import json
 import base64
 import codecs
 import random
-
-FLAG = "crypto{????????????????????}"
-ENCODINGS = [
-    "base64",
-    "hex",
-    "rot13",
-    "bigint",
-    "utf-8",
-]
-with open('/usr/share/dict/words') as f:
-    WORDS = [line.strip().replace("'", "") for line in f.readlines()]
+from binascii import unhexlify
 
 
-class Challenge():
-    def __init__(self):
-        self.challenge_words = ""
-        self.stage = 0
+r = remote('socket.cryptohack.org', 13377, level = 'debug')
 
-    def create_level(self):
-        self.stage += 1
-        self.challenge_words = "_".join(random.choices(WORDS, k=3))
-        encoding = random.choice(ENCODINGS)
+def json_recv():
+    line = r.recvline()
+    return json.loads(line.decode())
 
-        if encoding == "base64":
-            encoded = base64.b64encode(self.challenge_words.encode()).decode() # wow so encode
-        elif encoding == "hex":
-            encoded = self.challenge_words.encode().hex()
-        elif encoding == "rot13":
-            encoded = codecs.encode(self.challenge_words, 'rot_13')
-        elif encoding == "bigint":
-            encoded = hex(bytes_to_long(self.challenge_words.encode()))
-        elif encoding == "utf-8":
-            encoded = [ord(b) for b in self.challenge_words]
+def json_send(hsh):
+    request = json.dumps(hsh).encode()
+    r.sendline(request)
 
-        return {"type": encoding, "encoded": encoded}
+def list_to_string(s):
+    output = ""
+    return(output.join(s))
 
-    #
-    # This challenge function is called on your input, which must be JSON
-    # encoded
-    #
-    def challenge(self, your_input):
-        if self.stage == 0:
-            return self.create_level()
-        elif self.stage == 100:
-            self.exit = True
-            return {"flag": FLAG}
+for i in range(0,101):
+    received = json_recv()
+    if "flag" in received:
+        print("\n[*] FLAG: {}".format(received["flag"]))
+        break
 
-        if self.challenge_words == your_input["decoded"]:
-            return self.create_level()
+    print("\n[-] Cycle: {}".format(i))
+    print("[-] Received type: {}".format(received["type"]))
+    print("[-] Received encoded value: {}".format(received["encoded"]))
 
-        return {"error": "Decoding fail"}
+    word = received["encoded"]
+    encoding = received["type"]
 
+    if encoding == "base64":
+        decoded = base64.b64decode(word).decode('utf8').replace("'", '"')
+    elif encoding == "hex":
+        decoded = (unhexlify(word)).decode('utf8').replace("'", '"')
+    elif encoding == "rot13":
+        decoded = codecs.decode(word, 'rot_13')
+    elif encoding == "bigint":
+        decoded = unhexlify(word.replace("0x", "")).decode('utf8').replace("'", '"')
+    elif encoding == "utf-8":
+        decoded = list_to_string([chr(b) for b in word])
 
-listener.start_server(port=13377)
+    print("[-] Decoded: {}".format(decoded))
+    print("[-] Decoded Type: {}".format(type(decoded)))
 
+    to_send = {
+        "decoded": decoded
+    }
+
+    json_send(to_send)
