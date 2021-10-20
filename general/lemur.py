@@ -1,8 +1,6 @@
 from PIL import Image, ImageChops
-
-# Open images
-im1 = Image.open("flag.png").convert("1")
-im2 = Image.open("lemur.png").convert("1")
-
-result = ImageChops.logical_xor(im1,im2)
-result.save("result.png")
+pic1 = Image.open("/home/b00123313/Desktop/CryptoHack/general/LemurXOR/lemar.png")
+pic2 = Image.open("/home/b00123313/Desktop/CryptoHack/general/LemurXOR/flag.png")
+pic3 = ImageChops.add(ImageChops.subtract(pic2, pic1), ImageChops.subtract(pic1, pic2))
+pic3.show()
+pic3.save("/home/b00123313/Desktop/CryptoHack/general/LemurXOR//lemrpic3.png")
