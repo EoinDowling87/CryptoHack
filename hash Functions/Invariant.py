@@ -3,8 +3,9 @@ import json
 from hashlib import sha512
 from utils import listener
 
+nc = ("socket.cryptohack.org", 13393)
 FLAG = "crypto{????????????????????????????????}"
-nc = {'socket.cryptohack.org', 13393}
+
 
 class MyCipher:
     __NR = 31
@@ -93,5 +94,6 @@ class Challenge:
                 return {"hash": h.hex(), "info": "This was easy, right?"}
             else:
                 return {"hash": h.hex()}
+
 
 listener.start_server(port=13393)
